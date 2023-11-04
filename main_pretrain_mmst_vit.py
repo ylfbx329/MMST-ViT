@@ -30,61 +30,43 @@ from dataset import sentinel_wrapper
 def get_args_parser():
     parser = argparse.ArgumentParser('PVT SimCLR pre-training', add_help=False)
 
-    parser.add_argument('--batch_size', default=32, type=int,
-                        help='Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus')
+    parser.add_argument('--batch_size', default=32, type=int, help='Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus')
     parser.add_argument('--embed_dim', default=512, type=int, help='embed dimensions')
     parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--model', default='pvt_tiny', type=str, metavar='MODEL',
-                        help='Name of backbone model to train')
-    parser.add_argument('--accum_iter', default=1, type=int,
-                        help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
+    parser.add_argument('--model', default='pvt_tiny', type=str, metavar='MODEL', help='Name of backbone model to train')
+    parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
 
-    parser.add_argument('--norm_pix_loss', action='store_true',
-                        help='Use (per-patch) normalized pixels as targets for computing loss')
+    parser.add_argument('--norm_pix_loss', action='store_true', help='Use (per-patch) normalized pixels as targets for computing loss')
     parser.set_defaults(norm_pix_loss=False)
 
     # Optimizer parameters
-    parser.add_argument('--weight_decay', type=float, default=0.05,
-                        help='weight decay (default: 0.05)')
-    parser.add_argument('--layer_decay', type=float, default=0.75,
-                        help='layer decay (default: 0.75)')
+    parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
+    parser.add_argument('--layer_decay', type=float, default=0.75, help='layer decay (default: 0.75)')
 
-    parser.add_argument('--lr', type=float, default=None, metavar='LR',
-                        help='learning rate (absolute lr)')
-    parser.add_argument('--blr', type=float, default=1e-3, metavar='LR',
-                        help='base learning rate: absolute_lr = base_lr * total_batch_size / 256')
-    parser.add_argument('--min_lr', type=float, default=0., metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0')
+    parser.add_argument('--lr', type=float, default=None, metavar='LR', help='learning rate (absolute lr)')
+    parser.add_argument('--blr', type=float, default=1e-3, metavar='LR', help='base learning rate: absolute_lr = base_lr * total_batch_size / 256')
+    parser.add_argument('--min_lr', type=float, default=0., metavar='LR', help='lower lr bound for cyclic schedulers that hit 0')
 
-    parser.add_argument('--warmup_epochs', type=int, default=20, metavar='N',
-                        help='epochs to warmup LR')
+    parser.add_argument('--warmup_epochs', type=int, default=20, metavar='N', help='epochs to warmup LR')
 
-    parser.add_argument('--output_dir', default='./output_dir/pvt_simclr',
-                        help='path where to save, empty for no saving')
-    parser.add_argument('--log_dir', default='./output_dir/pvt_simclr',
-                        help='path where to tensorboard log')
-    parser.add_argument('--device', default='cuda:1',
-                        help='device to use for training / testing')
+    parser.add_argument('--output_dir', default='./output_dir/pvt_simclr', help='path where to save, empty for no saving')
+    parser.add_argument('--log_dir', default='./output_dir/pvt_simclr', help='path where to tensorboard log')
+    parser.add_argument('--device', default='cuda:1', help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
-    parser.add_argument('--resume', default='',
-                        help='resume from checkpoint')
+    parser.add_argument('--resume', default='', help='resume from checkpoint')
 
-    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
-                        help='start epoch')
+    parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='start epoch')
     parser.add_argument('--num_workers', default=10, type=int)
-    parser.add_argument('--pin_mem', action='store_true',
-                        help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
+    parser.add_argument('--pin_mem', action='store_true', help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
 
     # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
+    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
-    parser.add_argument('--dist_url', default='env://',
-                        help='url used to set up distributed training')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # dataset
     parser.add_argument('-dr', '--root_dir', type=str, default='/mnt/data/Tiny CropNet')
@@ -201,8 +183,7 @@ def main(args):
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=epoch)
 
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     'epoch': epoch, }
+        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch, }
 
         if args.output_dir and misc.is_main_process():
             if log_writer is not None:
@@ -237,8 +218,7 @@ def train_one_epoch(model: torch.nn.Module,
 
         fips, max_mem = x[1][0], torch.cuda.max_memory_allocated() / (1024.0 * 1024.0)
         num_grids = tuple(x[0].shape)[2]
-        print("Epoch: [{}]  [ {} / {}]  FIPS Code: {}  Number of Grids: {}  Max Mem: {}"
-              .format(epoch, data_iter_step, total_step, fips, num_grids, f"{max_mem:.0f}"))
+        print("Epoch: [{}]  [ {} / {}]  FIPS Code: {}  Number of Grids: {}  Max Mem: {}".format(epoch, data_iter_step, total_step, fips, num_grids, f"{max_mem:.0f}"))
 
         # we use a per iteration (instead of per epoch) lr scheduler
         if data_iter_step % accum_iter == 0:
@@ -263,8 +243,7 @@ def train_one_epoch(model: torch.nn.Module,
                 print("Loss is {}, stopping training".format(loss_value))
                 sys.exit(1)
             loss /= accum_iter
-            loss_scaler(loss, optimizer, parameters=model.parameters(),
-                        update_grad=(data_iter_step + 1) % accum_iter == 0)
+            loss_scaler(loss, optimizer, parameters=model.parameters(), update_grad=(data_iter_step + 1) % accum_iter == 0)
             if (data_iter_step + 1) % accum_iter == 0:
                 optimizer.zero_grad()
             torch.cuda.synchronize()
