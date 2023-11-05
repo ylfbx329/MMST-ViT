@@ -12,7 +12,7 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
-
+import torch.utils.data
 import timm.optim.optim_factory as optim_factory
 from tqdm import tqdm
 
@@ -82,7 +82,7 @@ def main(args):
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
 
-    device = torch.device(args.device)
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     # fix the seed for reproducibility
     seed = args.seed + misc.get_rank()
