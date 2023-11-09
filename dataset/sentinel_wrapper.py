@@ -26,9 +26,9 @@ class Sentinel_Subset(Dataset):
         x = self.X[index, :, :, :]
         y = self.Y[index, :, :]
 
+        # 转为img将shape从h,w,c->c,h,w
         img = Image.fromarray(np.uint8(x))
         xi, xj = self.transform(img)
-
         return xi, xj, y
 
 
@@ -58,12 +58,11 @@ class SimCLRDataTransform(object):
         return data_transforms
 
 
-def get_data_loader(X, Y, batch_size=128, num_workers=8):
+def get_data_loader(X, Y, batch_size=128, num_workers=0):
     transform = SimCLRDataTransform()
     dataset = Sentinel_Subset(X, Y, transform)
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, drop_last=False)
     # data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, drop_last=True)
-
     return data_loader
 
 

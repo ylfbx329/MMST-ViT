@@ -3,23 +3,21 @@ import json
 import pandas as pd
 
 
-def build_soybean_train(target_fips=None, year=None):
+def build_soybean_train(target_fips=None):
     csv_path = "./../input/county_info_2021.csv"
     df = pd.read_csv(csv_path)
 
-    # 筛选目标县的数据
     if target_fips:
         df = df[df["FIPS"].isin(target_fips)]
 
-    # 转换为json字符串
     counties = df.to_json(orient='records', lines=False)
     counties = json.loads(counties)
 
-    path = "./../data/soybean_train_" + str(year) + ".json"
+    path = "./../data/soybean_train.json"
 
     data = []
     for county_info in counties:
-        obj = get_json_obj(year, county_info)
+        obj = get_json_obj(2021, county_info)
         data.append(obj)
 
     with open(path, "x") as write_file:
@@ -27,7 +25,7 @@ def build_soybean_train(target_fips=None, year=None):
         json.dump(data, write_file)
 
 
-def build_soybean_val(target_fips=None, year=None):
+def build_soybean_val(target_fips=None):
     csv_path = "./../input/county_info_2022.csv"
     df = pd.read_csv(csv_path)
 
@@ -37,11 +35,11 @@ def build_soybean_val(target_fips=None, year=None):
     counties = df.to_json(orient='records', lines=False)
     counties = json.loads(counties)
 
-    path = "./../data/soybean_val_" + str(year) + ".json"
+    path = "./../data/soybean_val.json"
 
     data = []
     for county_info in counties:
-        obj = get_json_obj(year, county_info)
+        obj = get_json_obj(2022, county_info)
         data.append(obj)
 
     with open(path, "x") as write_file:
@@ -54,8 +52,7 @@ def get_json_obj(year, county_info):
 
     short_term = get_short_HRRR_obj(state, fips, year, months=[i for i in range(4, 10)])
 
-    # long_term_years = ["2017", "2018", "2019", "2020", "2021"]
-    long_term_years = [y for y in [2017, 2018, 2019, 2020, 2021] if y <= year]
+    long_term_years = ["2017", "2018", "2019", "2020", "2021"]
     long_term = get_long_HRRR_obj(state, fips, years=long_term_years)
 
     obj = {
@@ -87,7 +84,6 @@ def get_json_obj(year, county_info):
 def get_short_HRRR_obj(state, fips, year, months=[i + 1 for i in range(12)]):
     file_paths = []
     for month in months:
-        # 在小月份前补零，1->01
         month = str(month).zfill(2)
         path = "WRF-HRRR/data/{}/{}/HRRR_{}_{}_{}-{}.csv".format(year, state, fips[:2], state, year, month)
         file_paths.append(path)
@@ -108,8 +104,7 @@ def get_long_HRRR_obj(state, fips, years, months=[i + 1 for i in range(12)]):
 
 if __name__ == '__main__':
     target_fips = ["22007", "22121", "22043", "22107", "28089", "28015", "17091", "17155", "19117", "19135"]
-    # 转换为int列表
     target_fips = list(map(int, target_fips))
-    target_year = 2019
-    build_soybean_train(target_fips=target_fips, year=target_year - 1)
-    build_soybean_val(target_fips=target_fips, year=target_year)
+
+    build_soybean_train(target_fips=target_fips)
+    build_soybean_val(target_fips=target_fips)

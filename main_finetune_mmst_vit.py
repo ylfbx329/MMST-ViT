@@ -40,60 +40,44 @@ best_metrics = [float("inf"), 0, 0]
 def get_args_parser():
     parser = argparse.ArgumentParser('MMST-ViT fine-tuning', add_help=False)
 
-    parser.add_argument('--batch_size', default=64, type=int,
-                        help='Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus')
+    parser.add_argument('--batch_size', default=64, type=int, help='Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus')
     parser.add_argument('--embed_dim', default=512, type=int, help='embed dimensions')
     parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--model_pvt', default='pvt_tiny', type=str, metavar='MODEL',
-                        help='Name of backbone model to train')
-    parser.add_argument('--accum_iter', default=1, type=int,
-                        help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
+    parser.add_argument('--model_pvt', default='pvt_tiny', type=str, metavar='MODEL', help='Name of backbone model to train')
+    parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
 
-    parser.add_argument('--norm_pix_loss', action='store_true',
-                        help='Use (per-patch) normalized pixels as targets for computing loss')
+    parser.add_argument('--norm_pix_loss', action='store_true', help='Use (per-patch) normalized pixels as targets for computing loss')
     parser.set_defaults(norm_pix_loss=False)
 
     # Optimizer parameters
-    parser.add_argument('--weight_decay', type=float, default=0.05,
-                        help='weight decay (default: 0.05)')
+    parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
 
-    parser.add_argument('--lr', type=float, default=None, metavar='LR',
-                        help='learning rate (absolute lr)')
-    parser.add_argument('--blr', type=float, default=1e-3, metavar='LR',
-                        help='base learning rate: absolute_lr = base_lr * total_batch_size / 256')
-    parser.add_argument('--min_lr', type=float, default=0., metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0')
+    parser.add_argument('--lr', type=float, default=None, metavar='LR', help='learning rate (absolute lr)')
+    parser.add_argument('--blr', type=float, default=1e-3, metavar='LR', help='base learning rate: absolute_lr = base_lr * total_batch_size / 256')
+    parser.add_argument('--min_lr', type=float, default=0., metavar='LR', help='lower lr bound for cyclic schedulers that hit 0')
 
-    parser.add_argument('--warmup_epochs', type=int, default=40, metavar='N',
-                        help='epochs to warmup LR')
+    parser.add_argument('--warmup_epochs', type=int, default=40, metavar='N', help='epochs to warmup LR')
 
-    parser.add_argument('--output_dir', default='./output_dir/mmst_vit',
-                        help='path where to save, empty for no saving')
-    parser.add_argument('--log_dir', default='./output_dir/mmst_vit',
-                        help='path where to tensorboard log')
-    parser.add_argument('--device', default='cuda',
-                        help='device to use for training / testing')
+    parser.add_argument('--output_dir', default='./output_dir/mmst_vit', help='path where to save, empty for no saving')
+    parser.add_argument('--log_dir', default='./output_dir/mmst_vit', help='path where to tensorboard log')
+    parser.add_argument('--device', default='cuda', help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
 
-    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
-                        help='start epoch')
-    parser.add_argument('--num_workers', default=10, type=int)
-    parser.add_argument('--pin_mem', action='store_true',
-                        help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
+    parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='start epoch')
+    parser.add_argument('--num_workers', default=0, type=int)
+    parser.add_argument('--pin_mem', action='store_true', help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
 
     # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
+    parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
-    parser.add_argument('--dist_url', default='env://',
-                        help='url used to set up distributed training')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # dataset
-    parser.add_argument('-dr', '--root_dir', type=str, default='/mnt/data/Tiny CropNet')
+    parser.add_argument('-dr', '--root_dir', type=str, default=r'E:/data/Tiny-CropNet/')
     parser.add_argument('-sf', '--save_freq', type=int, default=2)
 
     # train and val
@@ -119,7 +103,7 @@ def main(args):
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
 
-    device = torch.device(args.device)
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     # fix the seed for reproducibility
     seed = args.seed + misc.get_rank()
@@ -336,7 +320,6 @@ def train_one_epoch(model: torch.nn.Module,
         if data_iter_step % accum_iter == 0:
             lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader_sentinel) + epoch, args)
 
-
         # satellited imagery
         x = x[0].to(device, non_blocking=True)
         # short- and long-term weather variables
@@ -350,7 +333,6 @@ def train_one_epoch(model: torch.nn.Module,
         x, _ = data_wrapper(x)
 
         x = rearrange(x, '(b t g) c h w -> b t g c h w', b=b, t=t, g=g)
-
 
         z_hat = model(x, ys=ys, yl=yl)
 
@@ -402,7 +384,6 @@ def evaluate(model: torch.nn.Module, data_loader_sentinel: Iterable, data_loader
 
     total_step = len(data_loader_sentinel) - 1
     for data_iter_step, (x, y, z) in enumerate(zip(data_loader_sentinel, data_loader_hrrr, data_loader_usda)):
-
         fips, max_mem = x[1][0], torch.cuda.max_memory_allocated() / (1024.0 * 1024.0)
         num_grids = tuple(x[0].shape)[2]
         print(" Eval [ {} / {}]  FIPS Code: {}  Number of Grids: {}  Max Mem: {}"
@@ -428,7 +409,6 @@ def evaluate(model: torch.nn.Module, data_loader_sentinel: Iterable, data_loader
         true_labels = torch.cat([true_labels, z.detach().cpu()], dim=0)
         pred_labels = torch.cat([pred_labels, z_hat.detach().cpu()], dim=0)
 
-
     true_labels = torch.exp(torch.flatten(true_labels[:, -1:], start_dim=0)).detach().cpu().numpy()
     pred_labels = torch.exp(torch.flatten(pred_labels[:, -1:], start_dim=0)).detach().cpu().numpy()
 
@@ -436,7 +416,7 @@ def evaluate(model: torch.nn.Module, data_loader_sentinel: Iterable, data_loader
 
     global best_metrics
     best_metrics = [min(best_metrics[0], rmse), max(best_metrics[1], r2), max(best_metrics[2], corr)]
-    print("Metrics: RMSE: {}  R_Squared: {}  Corr: {}".format(f"{best_metrics[0]:.2f}", f"{ best_metrics[1]:.2f}", f"{best_metrics[2]:.2f}"))
+    print("Metrics: RMSE: {}  R_Squared: {}  Corr: {}".format(f"{best_metrics[0]:.2f}", f"{best_metrics[1]:.2f}", f"{best_metrics[2]:.2f}"))
 
 
 if __name__ == '__main__':

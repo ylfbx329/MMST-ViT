@@ -47,10 +47,11 @@ class HRRR_Dataset(Dataset):
 
             long_term = []
             for file_paths in obj["data"]["HRRR"]["long_term"]:
+                # 一年期数据
                 tmp_long_term = []
                 for file_path in file_paths:
                     tmp_long_term.append(os.path.join(root_dir, file_path))
-
+                # 加入一年期数据
                 long_term.append(tmp_long_term)
 
             self.short_term_file_path.append(short_term)
@@ -94,21 +95,15 @@ class HRRR_Dataset(Dataset):
         temporal_list = []
         for month, df_month in group_month:
             group_grid = df_month.groupby(['Grid Index'])
-
             time_series = []
             for grid, df_grid in group_grid:
                 df_grid = df_grid.sort_values(by=['Day'], ascending=[True], na_position='first')
-
                 df_grid = df_grid[df_grid.Day.isin(self.day_range)]
                 df_grid = df_grid[self.select_cols]
-
                 val = torch.from_numpy(df_grid.values)
                 time_series.append(val)
-
             temporal_list.append(torch.stack(time_series))
-
         x_short = torch.stack(temporal_list)
-
         return x_short
 
     def get_long_term_val(self, fips_code, temporal_file_paths):
@@ -142,9 +137,9 @@ class HRRR_Dataset(Dataset):
                 val = torch.from_numpy(df_month.values)
                 val = torch.flatten(val, start_dim=0)
                 month_list.append(val)
-
+            # 添加一年数据，形成[2017,2018]
             temporal_list.append(torch.stack(month_list))
-
+        # 对多年数据压缩
         x_long = torch.stack(temporal_list)
         return x_long
 

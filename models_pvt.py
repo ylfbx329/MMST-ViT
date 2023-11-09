@@ -176,7 +176,6 @@ class PyramidVisionTransformer(nn.Module):
         trunc_normal_(self.cls_token, std=.02)
         self.apply(self._init_weights)
 
-
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             trunc_normal_(m.weight, std=.02)
@@ -202,11 +201,10 @@ class PyramidVisionTransformer(nn.Module):
         if H * W == self.patch_embed1.num_patches:
             return pos_embed
         else:
-            return F.interpolate(
-                pos_embed.reshape(1, patch_embed.H, patch_embed.W, -1).permute(0, 3, 1, 2),
-                size=(H, W), mode="bilinear").reshape(1, -1, H * W).permute(0, 2, 1)
+            return F.interpolate(pos_embed.reshape(1, patch_embed.H, patch_embed.W, -1).permute(0, 3, 1, 2), size=(H, W), mode="bilinear").reshape(1, -1, H * W).permute(0, 2, 1)
 
     def forward_features(self, x):
+        #
         B = x.shape[0]
 
         for i in range(self.num_stages):
@@ -256,9 +254,8 @@ def _conv_filter(state_dict, patch_size=16):
 @register_model
 def pvt_tiny(pretrained=False, **kwargs):
     model = PyramidVisionTransformer(
-        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1],
-        **kwargs)
+        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[2, 2, 2, 2], sr_ratios=[8, 4, 2, 1], **kwargs)
     model.default_cfg = _cfg()
 
     return model
@@ -267,8 +264,8 @@ def pvt_tiny(pretrained=False, **kwargs):
 @register_model
 def pvt_small(pretrained=False, **kwargs):
     model = PyramidVisionTransformer(
-        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1], **kwargs)
+        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1], **kwargs)
     model.default_cfg = _cfg()
 
     return model
@@ -277,8 +274,8 @@ def pvt_small(pretrained=False, **kwargs):
 @register_model
 def pvt_medium(pretrained=False, **kwargs):
     model = PyramidVisionTransformer(
-        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 4, 18, 3], sr_ratios=[8, 4, 2, 1],
+        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[3, 4, 18, 3], sr_ratios=[8, 4, 2, 1],
         **kwargs)
     model.default_cfg = _cfg()
 
@@ -288,8 +285,8 @@ def pvt_medium(pretrained=False, **kwargs):
 @register_model
 def pvt_large(pretrained=False, **kwargs):
     model = PyramidVisionTransformer(
-        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 8, 27, 3], sr_ratios=[8, 4, 2, 1],
+        patch_size=4, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 5, 8], mlp_ratios=[8, 8, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[3, 8, 27, 3], sr_ratios=[8, 4, 2, 1],
         **kwargs)
     model.default_cfg = _cfg()
 
@@ -299,8 +296,8 @@ def pvt_large(pretrained=False, **kwargs):
 @register_model
 def pvt_huge_v2(pretrained=False, **kwargs):
     model = PyramidVisionTransformer(
-        patch_size=4, embed_dims=[128, 256, 512, 768], num_heads=[2, 4, 8, 12], mlp_ratios=[8, 8, 4, 4], qkv_bias=True,
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), depths=[3, 10, 60, 3], sr_ratios=[8, 4, 2, 1],
+        patch_size=4, embed_dims=[128, 256, 512, 768], num_heads=[2, 4, 8, 12], mlp_ratios=[8, 8, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        depths=[3, 10, 60, 3], sr_ratios=[8, 4, 2, 1],
         **kwargs)
     model.default_cfg = _cfg()
 

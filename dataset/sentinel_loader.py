@@ -40,6 +40,8 @@ class Sentinel_Dataset(Dataset):
             with h5py.File(file_path, 'r') as hf:
                 groups = hf[fips_code]
                 for i, d in enumerate(groups.keys()):
+                    # 每月两幅图像，只考虑1号的一副
+                    # i文件夹索引，d文件夹名
                     # only consider the 1st day of each month
                     # note that the h5 file contains the 1st and 15th of images for each month, e.g., "04-01" and "04-15"
                     if i % 2 == 0:
@@ -47,14 +49,14 @@ class Sentinel_Dataset(Dataset):
                         grids = np.asarray(grids)
                         temporal_list.append(torch.from_numpy(grids))
                 hf.close()
-
+        # x.shape=1,t,g,w,h,c，t月份数，g网格数
         x = torch.stack(temporal_list)
 
         return x, fips_code, year
 
 
 if __name__ == '__main__':
-    root_dir = "/mnt/data/Tiny CropNet"
+    root_dir = r"E:/data/Tiny-CropNet/"
     # train = "./../data/soybean_train.json"
     train = "./../data/soybean_val.json"
     dataset = Sentinel_Dataset(root_dir, train)

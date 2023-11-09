@@ -1,3 +1,5 @@
+from torchsummary import summary
+
 import models_pvt
 from attention import MultiModalTransformer
 from torch import nn
@@ -34,3 +36,8 @@ class PVTSimCLR(nn.Module):
 
         # return the classification token
         return x[:, 0]
+
+
+if __name__ == "__main__":
+    model = PVTSimCLR("pvt_tiny", out_dim=512, context_dim=9, pretrained=True)
+    summary(model, [(1, 3, 224, 224), (1, 28, 9)])

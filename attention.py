@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn, einsum
 from einops import rearrange, repeat
+from torchsummary import summary
 
 
 def exists(val):
@@ -97,7 +98,7 @@ class MultiModalAttention(nn.Module):
         context = default(context, x)
         k = self.to_k(context)
         v = self.to_v(context)
-
+        # 最后一维除以h，第一维乘h
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
         sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
@@ -107,7 +108,6 @@ class MultiModalAttention(nn.Module):
             max_neg_value = -torch.finfo(sim.dtype).max
             mask = repeat(mask, 'b j -> (b h) () j', h=h)
             sim.masked_fill_(~mask, max_neg_value)
-
 
         # attention, what we cannot get enough of
         attn = sim.softmax(dim=-1)
@@ -192,8 +192,7 @@ class MultiModalTransformer(nn.Module):
         self.norm = nn.LayerNorm(dim)
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, MultiModalAttention(dim, context_dim=context_dim, heads=heads, dim_head=dim_head,
-                                                 dropout=dropout)),
+                PreNorm(dim, MultiModalAttention(dim, context_dim=context_dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                 PreNorm(dim, FeedForward(dim, dim_out=dim, mult=mult, dropout=dropout))
             ]))
 

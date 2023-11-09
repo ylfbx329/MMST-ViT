@@ -3,6 +3,7 @@ import datetime
 import json
 import math
 import sys
+from multiprocessing import freeze_support
 
 import numpy as np
 import os
@@ -57,7 +58,7 @@ def get_args_parser():
     parser.add_argument('--resume', default='', help='resume from checkpoint')
 
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='start epoch')
-    parser.add_argument('--num_workers', default=10, type=int)
+    parser.add_argument('--num_workers', default=0, type=int)
     parser.add_argument('--pin_mem', action='store_true', help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
@@ -69,28 +70,37 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # dataset
-    parser.add_argument('-dr', '--root_dir', type=str, default='/mnt/data/Tiny CropNet')
-    parser.add_argument('-tf', '--data_file', type=str, default='./data/soybean_train.json')
+    parser.add_argument('-dr', '--root_dir', type=str, default=r'E:/data/Tiny-CropNet/')
+    parser.add_argument('-tf', '--data_file', type=str, default=r'.\data\soybean_train.json')
     parser.add_argument('-sf', '--save_freq', type=int, default=5)
 
     return parser
 
 
 def main(args):
+    # 分布式训练初始化，预训练为false
     misc.init_distributed_mode(args)
 
+    # 打印工作目录
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
+    # 打印参数
     print("{}".format(args).replace(', ', ',\n'))
 
+    # 设置训练设备
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     # fix the seed for reproducibility
+    # 固定随机种子保证可复现性
     seed = args.seed + misc.get_rank()
+    # 获取随机数生成器
     torch.manual_seed(seed)
+    # 设置单例RandomState的种子
     np.random.seed(seed)
 
+    # cuDNN 自行选择最快算法，增加运行效率
     cudnn.benchmark = True
 
+    # args.root_dir数据根目录，data_file训练文件
     dataset_sentinel = Sentinel_Dataset(args.root_dir, args.data_file)
     dataset_hrrr = HRRR_Dataset(args.root_dir, args.data_file)
 
@@ -100,24 +110,26 @@ def main(args):
         sampler_sentinel = torch.utils.data.DistributedSampler(
             dataset_sentinel, num_replicas=num_tasks, rank=global_rank, shuffle=True
         )
-
         sampler_hrrr = torch.utils.data.DistributedSampler(
             dataset_hrrr, num_replicas=num_tasks, rank=global_rank, shuffle=True
         )
         print("Sampler_sentinel = %s" % str(sampler_sentinel))
         print("Sampler_hrrr = %s" % str(sampler_hrrr))
-    else:
-        sampler_sentinel = torch.utils.data.RandomSampler(dataset_sentinel)
-        sampler_hrrr = torch.utils.data.RandomSampler(dataset_hrrr)
+    # else:
+    # sampler_sentinel = torch.utils.data.RandomSampler(dataset_sentinel)
+    # sampler_hrrr = torch.utils.data.RandomSampler(dataset_hrrr)
 
+    # 主节点设置日志文件夹和写入器
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
         log_writer = SummaryWriter(log_dir=args.log_dir)
     else:
         log_writer = None
 
+    # 数据加载器
     data_loader_sentinel = torch.utils.data.DataLoader(
-        dataset_sentinel, sampler=sampler_sentinel,
+        dataset_sentinel,
+        sampler=sampler_sentinel,
         batch_size=1,
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
@@ -126,7 +138,8 @@ def main(args):
     )
 
     data_loader_hrrr = torch.utils.data.DataLoader(
-        dataset_hrrr, sampler=sampler_hrrr,
+        dataset_hrrr,
+        sampler=sampler_hrrr,
         batch_size=1,
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
@@ -135,7 +148,6 @@ def main(args):
     )
 
     model = PVTSimCLR(args.model, out_dim=args.embed_dim, context_dim=9, pretrained=True)
-
     model.to(device)
 
     model_without_ddp = model
@@ -172,16 +184,13 @@ def main(args):
             data_loader_hrrr.sampler.set_epoch(epoch)
 
         train_stats = train_one_epoch(
-            model, data_loader_sentinel, data_loader_hrrr,
-            optimizer, device, epoch, loss_scaler,
+            model, data_loader_sentinel, data_loader_hrrr, optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
             args=args
         )
 
         if args.output_dir and (epoch % args.save_freq == 0 or epoch + 1 == args.epochs):
-            misc.save_model(
-                args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                loss_scaler=loss_scaler, epoch=epoch)
+            misc.save_model(args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler, epoch=epoch)
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch, }
 
@@ -215,7 +224,7 @@ def train_one_epoch(model: torch.nn.Module,
 
     total_step = len(data_loader_sentinel) - 1
     for data_iter_step, (x, y) in enumerate(zip(data_loader_sentinel, data_loader_hrrr)):
-
+        # x=[x,fips,year]
         fips, max_mem = x[1][0], torch.cuda.max_memory_allocated() / (1024.0 * 1024.0)
         num_grids = tuple(x[0].shape)[2]
         print("Epoch: [{}]  [ {} / {}]  FIPS Code: {}  Number of Grids: {}  Max Mem: {}".format(epoch, data_iter_step, total_step, fips, num_grids, f"{max_mem:.0f}"))
@@ -246,7 +255,7 @@ def train_one_epoch(model: torch.nn.Module,
             loss_scaler(loss, optimizer, parameters=model.parameters(), update_grad=(data_iter_step + 1) % accum_iter == 0)
             if (data_iter_step + 1) % accum_iter == 0:
                 optimizer.zero_grad()
-            torch.cuda.synchronize()
+            # torch.cuda.synchronize()
             metric_logger.update(loss=loss_value)
             lr = optimizer.param_groups[0]["lr"]
             metric_logger.update(lr=lr)

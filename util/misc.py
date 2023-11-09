@@ -193,12 +193,22 @@ def is_dist_avail_and_initialized():
 
 
 def get_world_size():
+    """
+    扩展torch.distributed的get_world_size函数
+
+    :return: 返回包含主节点在内的节点个数
+    """
     if not is_dist_avail_and_initialized():
         return 1
     return dist.get_world_size()
 
 
 def get_rank():
+    """
+    扩展torch.distributed的get_rank函数
+
+    :return: 返回包含主节点在内的从零开始的编号
+    """
     if not is_dist_avail_and_initialized():
         return 0
     return dist.get_rank()
@@ -214,6 +224,7 @@ def save_on_master(*args, **kwargs):
 
 
 def init_distributed_mode(args):
+    print(args.dist_on_itp)
     if args.dist_on_itp:
         args.rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
         args.world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
@@ -314,6 +325,7 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler):
 
 def load_model(args, model_without_ddp, optimizer, loss_scaler):
     if args.resume:
+        print("res")
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 args.resume, map_location='cpu', check_hash=True)
@@ -327,6 +339,7 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
+    print("outres")
 
 
 def all_reduce_mean(x):
